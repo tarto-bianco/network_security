@@ -81,22 +81,22 @@ Create the rules directory and a local.rules file for custom Suricata rules. Thi
 
 ## sudo nano /etc/suricata/suricata.yaml
 
-![suricatarules-1_1](images/suricatarules-1_1.png)
+![suricatarules-1_1](images/suricatarules-1.1.png)
 
 Open the main Suricata configuration file in nano. The file shows the default-rule-path set to /etc/suricata/rules and rule-files listing suricata.rules.
 
-![suricatarules-1_2](images/suricatarules-1_2.png)
+![suricatarules-1_2](images/suricatarules-1.2.png)
 
 Configure the af-packet interface settings. The configuration shows interface, ens160 which we changed to match our interface identified earlier.
 
-![suricatarules-1_3](images/suricatarules-1_3.png)
+![suricatarules-1_3](images/suricatarules-1.3.png)
 
 Update the default-rule-path to /var/lib/suricata/rules. Add /etc/suricata/rules/local.rules to the rule-files list for our custom rule support.
 
 ## sudo nano /etc/suricata/suricata.yaml
 ## sudo suricata -T -c /etc/suricata/suricata.yaml -v
 
-![suricatarules-1_4](images/suricatarules-1_4.png)
+![suricatarules-1_4](images/suricatarules-1.4.png)
 
 Test the Suricata configuration to ensure everything is set up correctly. The output shows Suricata version 6.0.4 running in test mode, with 2 rule files processed and 46236 rules successfully loaded.
 
