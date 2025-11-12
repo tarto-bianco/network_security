@@ -56,8 +56,6 @@ Install suricata-update tool to manage and update Suricata rules. The output sho
 
 ## sudo suricata-update
 
-![suricatarules-7](images/suricatarules-7.png)
-
 Run suricata-update to download and install the latest Suricata rulesets.
 
 ## nano /var/lib/suricata/rules/suricata.rules
@@ -120,4 +118,45 @@ Monitor Suricata's EVE JSON log file in real-time with formatted output. The JSO
 Continue monitoring the eve.json log file with jq formatting. The output displays detailed packet capture and decoder statistics in a readable JSON format.
 
 Under "event_type" you will notice a stats event type. Which means Suricata is logging statistical information about its performance and packet processing activity.
+
+## Loki is a tool created by Grafana labs, which is a userfriendly and performant way of effectively logging and managing logs in various enviroments, networks and systems. Loki can process multiple kinds of logs including Event logs, Server Logs, System Logs (syslog) Authorization and Access Logs, Change Logs and more. We will be exploring a few them here. 
+
+## sudo mkdir -p /etc/loki /var/lib/loki/{chunks,rules}
+
+![loki-1](images/loki-1.png)
+
+Create the necessary directories for Loki configuration and data storage. The -p flag creates a parent directories as needed, setting up /etc/loki for config files and /var/lib/loki subdirectories for chunks and rules.
+
+## cat <<'EOF' | sudo tee /etc/loki/loki-config.yml
+
+![loki-2](images/loki-2.png)
+
+Create the Loki configuration file 
+
+## sudo chown -R 10001:10001 /var/lib/loki
+
+![loki-3](images/loki-3.png)
+
+Change ownership of the Loki data directory to user and group 10001. This matches the user ID that Loki runs as inside the Docker container.
+
+## sudo chmod -R u+rwX /var/lib/loki
+
+![loki-4](images/loki-4.png)
+
+Set appropriate permissions on the Loki directory. The u+rwX flag gives the owner read, write, and execute permissions.
+
+## sudo docker run -d --name loki -p 3100:3100 -v /etc/loki:/etc/loki -v /var/lib/loki:/var/lib/loki grafana/loki:2.9.8 -config.file=/etc/loki/loki-config.yml
+
+![loki-5](images/loki-5.png)
+
+Run Loki as a Docker container, the command mounts the configuration and data directories, exposes port 3100, and uses the grafana/loki:2.9.8 image with our custom config file.
+
+## sudo docker ps
+
+![loki-6](images/loki-6.png)
+
+Verify the Loki container is running. The output shows the container with ID 4817ee2be38d is up and running, using the grafana/loki:2.9.8 image with port 3100 mapped.
+
+Loki exposes port 3100, and the API path that receives log data is /loki/api/v1/push 
+This is the endpoint where log shippers like Promtail send log entries to Loki for storage and indexing. Which we will be using next. 
 
