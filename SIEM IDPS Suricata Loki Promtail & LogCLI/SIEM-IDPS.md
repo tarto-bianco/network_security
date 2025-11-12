@@ -50,7 +50,7 @@ Install Suricata on your Ubuntu system.
 
 ## sudo apt -y install suricata-update
 
-![installsuricata-6_1](images/installsuricata-6_1.png)
+![installsuricata-6_1](images/installsuricata-6.1.png)
 
 Install suricata-update tool to manage and update Suricata rules. The output shows suricata-update version 1.2.3-1 is already installed.
 

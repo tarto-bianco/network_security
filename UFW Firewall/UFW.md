@@ -1,5 +1,8 @@
 # UFW Firewall Lab
 
+## This report documents the configuration and management of UFW (Uncomplicated Firewall), a user friendly commandline tool for managing iptables firewall rules on Linux systems. Today we will be implementing a functional firewall configuration that demonstrates fundamental security principles including deny policies, access controls, IP filtering, and comprehensive logging. Additionally we will explore essential firewall concepts such as port management, IP based access control lists, and logging systems that enable security monitoring and incident response. 
+
+
 # Enable UFW (Uncomplicated Firewall) 
 ## sudo ufw status 
 

@@ -1,5 +1,5 @@
 ## Intro to SNORT an Open Source Intrusion Prevention System 
-## Step 1: Update the System
+## This exploration documents the installation, configuration, and deployment of Snort, an open source intrusion detection prevention system (IDPS). Snort functions as a network security tool that monitors network traffic in real time, analyzing packets against a rule set to detect suspicious activity, we will be configuring said rule set in our exploration today. The objective of this lab is to successfully deploy Snort on Ubuntu, configure it to monitor a specific network interface, implement some detection rules, and validate its working and running in both interactive and daemon modes. 
 
 ### sudo apt update
 
