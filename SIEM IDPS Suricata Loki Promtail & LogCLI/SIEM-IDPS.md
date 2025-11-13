@@ -160,3 +160,140 @@ Verify the Loki container is running. The output shows the container with ID 481
 Loki exposes port 3100, and the API path that receives log data is /loki/api/v1/push 
 This is the endpoint where log shippers like Promtail send log entries to Loki for storage and indexing. Which we will be using next. 
 
+## sudo mkdir -p /etc/promtail /var/lib/promtail
+
+![promtail-1](images/promtail-1.png)
+
+Make the necessary directories for Promtail. The -p flag creates the parent directory.
+
+## cat <<'EOF' | sudo tee /etc/promtail/promtail-config.yml
+
+![promtail-2](images/promtail-2.png)
+
+This promtail configuration sets up the server on port 9080, defines the Loki client URL (http://localhost:3100/loki/api/v1/push), positions file location, and scrapes configs for the suricata job.
+
+## sudo docker run -d --name promtail -p 9080:9080 -v /etc/promtail:/etc/promtail -v /var/log/suricata:/var/log/suricata:ro -v /var/lib/promtail:/var/lib/promtail grafana/promtail:2.9.8 -config.file=/etc/promtail/promtail-config.yml
+
+![promtail-3](images/promtail-3.png)
+
+Run Promtail as a Docker container. We then name the container. We map it to port 9080 which is Promtail's HTTP status page. We then mount the config, and share which config the container is inside. We also make it so Promtail can read eve.json, from suricata which we created earlier. 
+
+**What role does Promtail play compared to Loki?**
+
+Promtail acts as the log shipping agent that collects and forwards logs to Loki. While Loki is the centralized log aggregation system that stores and indexees logs. Promtail runs reads the log files, and pushes them to Loki's API. 
+
+**Why does Promtail track a "position file?**
+
+Promtail tracks a position file to remember where it left off reading log files. This solves the problem of duplicate log entries or missing logs when Promtail restarts. 
+
+## curl -L https://github.com/grafana/loki/releases/download/v2.9.8/logcli-linux-arm64.zip -o /tmp/logcli.zip
+
+![logcli-1](images/logcli-1.png)
+
+Download LogCLI from the Grafana GitHub. 
+
+## sudo unzip -o /tmp/logcli.zip -d /usr/local/bin
+## sudo mv /usr/local/bin/logcli-linux-arm64 /usr/local/bin/logcli
+## sudo chmod +x /usr/local/bin/logcli
+## logcli --version
+
+![logicli-2](images/logicli-2.png)
+
+Extract LogCLI from the zip file, rename it for easier use, make it executable, and verify. Here the output shows logcli version 2.9.8. 
+
+## logcli labels --addr=http://localhost:3100
+
+![logcli-3](images/logcli-3.png)
+
+Query Loki to list all available labels in the stored logs. The command connects to the Loki API at localhost:3100.
+
+## logcli query --addr=http://localhost:3100 --limit=10 '{job="suricata"}'
+
+![logcli-4](images/logcli-4.png)
+
+Query Loki for the last 10 log entries with the job label set to "suricata". The command connects to Loki's query API and retrieves logs matching our selector, which is suricata.
+
+The primary label attached to our logs is `job="suricata"` 
+
+**How do labels differ from full-text indexes?**
+
+Labels are indexed metadata tags that allow for fast, efficient filtering of log streams before searching content. They work like database indexes. Loki uses labels to quickly identify which log streams to search, making queries much faster. Full text indexes, on the other hand, index the entire content of logs, which is storage intensive and slower. 
+
+## echo 'alert http any any -> any any (msg:"LAB UA hit"; http.user_agent; content:"CPS-NETSEC-LAB"; sid:9900001; rev:1;)' | sudo tee -a /etc/suricata/rules/local.rules
+
+![alerts-1](images/alerts-1.png)
+
+Create a custom Suricata rule to detect HTTP traffic with a specific User-Agent string. The rule appends to local.rules and will trigger an alert when it detects "CPS-NETSEC-LAB" in the User-Agent header.
+
+## sudo systemctl restart suricata
+
+![alerts-2](images/alerts-2.png)
+
+Restart the Suricata service to load the new custom rule. This ensures Suricata picks up the changes made to local.rules.
+
+## sudo suricata -T -c /etc/suricata/suricata.yaml -v
+
+![alerts-3](images/alerts-3.png)
+
+Test the Suricata configuration to verify the new rule loaded successfully. The output shows Suricata version 6.0.4 running in test mode with 2 rule files processed and 46237 rules successfully loaded (one more than before).
+
+## curl -A "CPS-NETSEC-LAB" http://example.com/ | true
+
+![alerts-4](images/alerts-4.png)
+
+Generate test traffic to trigger the custom Suricata rule. The curl command sends an HTTP request to example.com with the User-Agent set to "CPS-NETSEC-LAB", which should match our detection rule.
+
+## logcli query --addr=http://localhost:3100 --limit=50 '{job="suricata"} |= "event_type\":\"alert\"' | jq | line_format "{{.alert.signature}}"
+
+![alerts-5](images/alerts-5.png)
+
+Query Loki for alert events from Suricata logs and format the output to show alert signatures. The command searches for logs with event_type "alert". Currently we have no alert triggers pop up as the system is freshly setup. Use ctrl + c to exit.
+
+## logcli query --addr=http://localhost:3100 --limit=1000 --since=5m '{job="suricata"} |= "event_type\":\"alert"' | jq -r '.line' | jq '.src_ip' | sort | uniq -c | sort -nr | head
+
+![correlation-1](images/correlation-1.png)
+
+Query Loki for alerts from the last 5 minutes and analyze source IP addresses.
+
+**What does this simple command illustrate about correlation and aggregation in SIEMs?**
+
+This command demonstrates SIEM correlation and aggregation by taking raw alert data and transforming it into actionable intelligence. It takes multiple alert events by a common IP, aggregates them, and ranks them by frequency.
+
+**How might a SOC use this information in an investigation?**
+
+A SOC analyst could use this aggregated view to prioritize investigations by focusing on the IP addresses generating the most alerts first, as they represent the highest volume of suspicious activity. They could then pivot to investigate what types of alerts that IP triggered, what destination systems it targeted, and prevent lateral movement throughout a compromised system if it gets to that point. 
+
+## echo 'alert icmp any any -> any any (msg:"LAB ICMP Ping Detected"; itype:8; sid:9900004; rev:1;)' | sudo tee -a /etc/suricata/rules/local.rules
+
+![customrule-1](images/customrule-1.png)
+
+Create a custom Suricata rule to detect ping traffic. The rule triggers on any ICMP packet with an echo request type from any source to any destination.
+
+## sudo systemctl restart suricata
+## ping -c 10 9.9.9.9
+
+![customrule-2](images/customrule-2.png)
+
+Restart Suricata to load the new rule, then generate ICMP traffic by pinging 9.9.9.9. The ping completes successfully with 10 packets transmitted and received.
+
+## sudo tail -100 /var/log/suricata/eve.json | jq 'select(.event_type == "alert" or .event_type == "icmp")'
+
+![customrule-3](images/customrule-3.png)
+
+Verify the alert was triggered by checking the Suricata logs in eve.json. The output shows our custom rule successfully detected the ping traffic from source IP 192.168.85.128 to destination 9.9.9.9.
+
+
+This rule detected ICMP echo request packets (ping requests) with type 8. These are standard ping packets sent when using the ping command to test network connectivity.
+
+**How did you test and confirm that it triggered correctly?**
+
+I tested the rule by using the ping command to send ICMP packets to 9.9.9.9, then verified the alert was generated by checking the eve.json log file. The log showed an event_type of "alert", confirming the rule triggered successfully.
+
+**How would you modify your rule to make it more specific (to reduce false positives)? Why is fine-tuning rules important in real-world intrusion detection?**
+
+To make the rule more specific, I could add conditions like limiting it to specific source destination networks, setting thresholds to only alert on excessive ping activity, or combining it with other indicators. 
+
+
+## Wrapping Up
+
+In this lab, we successfully implemented a lightweight yet powerful SIEM and IDPS solution by integrating Suricata, Loki, Promtail, and LogCLI on Ubuntu. We configured it all in containers using Docker. We used Suricata as our network intrusion detection engine to monitor traffic and generate alerts based on custom rules, while Loki provided log aggregation. Promtail acted as our log shipping agent, reading Suricata's eve.json output and forwarding it to Loki, and LogCLI gave us command line query capabilities to search, filter, and analyze security events. Through hands on configuration and testing, we explored the complete threat detection pipeline from rule creation and packet inspection to log aggregation and analysis learning how custom Suricata rules detect specific network patterns, how labels enable fast log filtering in Loki, and how aggregation transforms raw alerts into actionable intelligence for security analysts. This architecture demonstrates key SIEM principles of centralized logging, real-time detection, efficient storage, and flexible querying. 
