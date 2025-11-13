@@ -113,10 +113,6 @@ Stop any existing Suricata service and run Suricata in daemon mode on the networ
 
 Monitor Suricata's EVE JSON log file in real-time with formatted output. The JSON shows event statistics including uptime, capture statistics (kernel_packets, kernel_drops, errors), and decoder statistics for various protocols.
 
-![suricata-11](images/suricata-11.png)
-
-Continue monitoring the eve.json log file with jq formatting. The output displays detailed packet capture and decoder statistics in a readable JSON format.
-
 Under "event_type" you will notice a stats event type. Which means Suricata is logging statistical information about its performance and packet processing activity.
 
 ## Loki is a tool created by Grafana labs, which is a userfriendly and performant way of effectively logging and managing logs in various enviroments, networks and systems. Loki can process multiple kinds of logs including Event logs, Server Logs, System Logs (syslog) Authorization and Access Logs, Change Logs and more. We will be exploring a few them here. 
