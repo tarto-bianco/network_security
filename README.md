@@ -8,3 +8,4 @@ The purpose of these experiments are to simulate attacks, implement countermeasu
 - [Exploring Ubuntu Home Lab](/Exploring%20Ubuntu/Exploring%20Ubuntu.md)
 - [Exploring UFW](/UFW%20Firewall/UFW.md)
 - [SNORT](/SNORT/snort.md)
+- [SIEM-IDPS](/SIEM%20IDPS%20Suricata%20Loki%20Promtail%20&%20LogCLI/SIEM-IDPS.md)
